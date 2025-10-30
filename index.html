@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jogo — Matemática, Educação Financeira, Português & Tempo (1 Robô)</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app" role="application" aria-label="Jogo – Matemática, Educação Financeira e Português">
+    <div class="topbar">
+      <div class="back-btn-container">
+        <button class="mini ghost" id="backBtn" title="Voltar à seleção" aria-label="Voltar à seleção" disabled>⟵ Voltar</button>
+      </div>
+      <div class="scorewrap">
+        <div class="score" id="score" aria-live="polite" aria-atomic="true">Pontos: 0</div>
+        <div class="subscore" id="subscore" aria-live="polite" aria-atomic="true">Acertos: 0
+Erros: 0</div>
+        <button class="mini" id="statsBtn" title="Ver estatísticas" aria-label="Ver estatísticas">📊</button>
+      </div>
+    </div>
+
+    <!-- ===== Start Screen Overlay ===== -->
+    <section id="startOverlay" class="overlay" aria-label="Tela de seleção de categorias">
+      <div class="panel" role="dialog" aria-modal="true">
+        <h2>Escolha as categorias</h2>
+        <div class="desc">Selecione <strong>uma ou mais</strong> categorias e clique em <em>Iniciar</em>. Você pode recolher/expandir os grupos.</div>
+        <div class="catGroups" id="catGroups"></div>
+        <div class="panel-footer" style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:6px;">
+          <label style="display:flex; align-items:center; gap:8px; color:var(--muted)"><input type="checkbox" id="resetOnStart" checked> Zerar placar ao iniciar</label>
+          <div class="actions">
+            <button class="btn tertiary" id="selectAllBtn" type="button">Selecionar tudo</button>
+            <button class="btn secondary" id="clearAllBtn" type="button">Limpar</button>
+            <button class="btn primary" id="startBtn" type="button" disabled>Iniciar ▶</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="arena" id="arena">
+      <canvas id="botCanvas"></canvas>
+      <div class="hint" id="hint">Escolha a opção correta</div>
+      <div id="word" class="wordBox neutral" aria-live="polite" aria-atomic="true">—</div>
+    </section>
+
+    <footer class="footer">
+      <div class="bar">
+        <div>Categoria: <span class="chip" id="category">—</span></div>
+        <div class="nextInfo" id="nextInfo"></div>
+      </div>
+      <div id="options" class="options" role="group" aria-label="Opções"></div>
+    </footer>
+
+    <dialog id="statsModal">
+      <form method="dialog">
+        <h2>Estatísticas por item</h2>
+        <div class="legend">Ordenado por % de acerto</div>
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr><th>Item</th><th>Categoria</th><th>Acertos</th><th>Erros</th><th>%</th><th>Tentativas</th></tr>
+            </thead>
+            <tbody id="statsBody"></tbody>
+          </table>
+        </div>
+        <div class="actions"><button id="closeStats" class="mini">Fechar</button></div>
+      </form>
+    </dialog>
+  </main>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
