@@ -421,7 +421,7 @@ function handleChoice(val){
     hits += 1; streak += 1; STATS[current.key].correct += 1;
     updateScoreUI();
     updateRobotCount(); // Atualiza número de robôs após acerto
-    renderWord('correct', isNumAnswer ? val : null, { showX:false }); hintEl.textContent = 'Muito bem! ✅';
+    renderWord('correct', val, { showX:false }); hintEl.textContent = 'Muito bem! ✅';
     setMoodAll('happy', 1500);
     nextEl.textContent = 'Novo desafio em 2 segundos…';
     timeoutId = setTimeout(nextRound, 2000);
@@ -429,7 +429,7 @@ function handleChoice(val){
     misses += 1; streak = 0; STATS[current.key].wrong += 1;
     updateScoreUI();
     updateRobotCount(); // Atualiza número de robôs após erro (streak zerado)
-    renderWord('wrong', isNumAnswer ? val : null, { showX:true });
+    renderWord('wrong', val, { showX:true });
     const feedback = isNumAnswer ? `A resposta correta aparecerá a seguir.` : 'Leia com atenção.';
     hintEl.textContent = `Quase! ❌ ${feedback}`;
     setMoodAll('sad', 1200);
