@@ -4,6 +4,7 @@ import { GROUPS } from './categorias/_grupo.js';
 import { createRobots } from './sprites/robot.js';
 import { createDucklings } from './sprites/duckling.js';
 import { createBunnies } from './sprites/bunny.js';
+import { SpriteManager } from './sprites/manager.js';
 
 /*
   === EXEMPLO DE EXTENSIBILIDADE ===
