@@ -57,3 +57,14 @@ dialog::backdrop{ background:rgba(15,23,42,.35) }
 .panel-footer{ flex-shrink:0; }
 .ghost{ background:#fff; color:#0f172a; border:1px solid #e2e8f0; }
 .ghost:hover{ filter:brightness(0.97) }
+
+/* Seletor de Sprites */
+input[name="spriteType"] {
+  margin-right: 4px;
+  transform: scale(1.2);
+}
+
+input[name="spriteType"]:checked + span {
+  font-weight: bold;
+  color: #2563eb;
+}

@@ -25,6 +25,26 @@ Erros: 0</div>
       <div class="panel" role="dialog" aria-modal="true">
         <h2>Escolha as categorias</h2>
         <div class="desc">Selecione <strong>uma ou mais</strong> categorias e clique em <em>Iniciar</em>. Você pode recolher/expandir os grupos.</div>
+        
+        <!-- Seletor de Sprites -->
+        <div style="margin: 15px 0; padding: 10px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
+          <h3 style="margin: 0 0 10px 0; font-size: 0.9em; color: #6c757d;">🎭 Escolha seus sprites:</h3>
+          <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="radio" name="spriteType" value="robots" id="spriteRobots" >
+              <span>🤖 Robôs</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="radio" name="spriteType" value="ducklings" id="spriteDucklings" checked>
+              <span>🐥 Pintinhos</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="radio" name="spriteType" value="mixed" id="spriteMixed">
+              <span>🎪 Misturado</span>
+            </label>
+          </div>
+        </div>
+        
         <div class="catGroups" id="catGroups"></div>
         <div class="panel-footer" style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:6px;">
           <label style="display:flex; align-items:center; gap:8px; color:var(--muted)"><input type="checkbox" id="resetOnStart" checked> Zerar placar ao iniciar</label>

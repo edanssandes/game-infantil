@@ -1,6 +1,37 @@
 // =================== Imports das Categorias ===================
 import { randi, randf, pick } from './categorias/utils.js';
 import { GROUPS } from './categorias/_grupo.js';
+import { SpriteManager } from './sprites/manager.js';
+import { createRobots } from './sprites/robot.js';
+import { createDucklings } from './sprites/duckling.js';
+
+/*
+  === EXEMPLO DE EXTENSIBILIDADE ===
+  
+  Para adicionar um novo tipo de sprite (ex: sapo), você precisaria apenas:
+  
+  1. Criar sprites/frog.js:
+     - export class Frog extends Sprite { ... }
+     - export function createRandomFrog(x, y, bounds) { ... }
+  
+  2. Importar no main.js:
+     - import { createRandomFrog } from './sprites/frog.js';
+  
+  3. Adicionar no HTML:
+     - <input type="radio" name="spriteType" value="frogs" id="spriteFrogs">
+     - <span>🐸 Sapos</span>
+  
+  4. Atualizar as funções de suporte:
+     - getSpriteTypeName(): case 'frogs': return 'Sapo';
+     - getSpriteTypePlural(): case 'frogs': return 'Sapos';  
+     - getSpriteEmoji(): case 'frogs': return '🐸';
+     - createSprites(): case 'frogs': createFrogs(bounds); break;
+  
+  5. Criar função createFrogs():
+     - function createFrogs(bounds, count = 5) { ... }
+  
+  E pronto! O sistema é completamente modular e extensível!
+*/
 
 // =================== Elementos e Estado ===================
 const wordEl     = document.getElementById('word');
@@ -26,39 +57,20 @@ let current = null; // { cat,key,answer,display,options[],hint }
 let lock = false; let timeoutId = null; let timeoutId2 = null; let lastKey = '';
 const STATS = {}; // key -> {correct, wrong, cat, label}
 
-// =================== 2 Robôs no canvas ===================
+// =================== Sistema de Sprites ===================
 const arenaEl = document.getElementById('arena');
 const canvas = document.getElementById('botCanvas');
-const ctx = canvas.getContext('2d');
 
+// Utility functions para compatibilidade
 const clamp10 = n => Math.max(0, Math.min(20, n));
 const scaleFromStreak = s => 1 + 0.14 * clamp10(s);
-const smileFromStreak = s => 0.5 + 0.5 * (clamp10(s) / 20);
-const SPEED_CYCLE = [30, 20, 10, 8, 5, 45, 3, 2];
 
-function speedBoostFromPhase(phase){
-  // Fase é um índice inteiro que caminha ciclicamente, independente do streak
-  return 1 + 0.04 * SPEED_CYCLE[phase % SPEED_CYCLE.length];
-}
+// Gerenciador de sprites
+let spriteManager = null;
+let numRobots = 1; // Número atual de sprites ativos
+let currentSpriteType = 'duckling'; // Tipo atual de sprite
 
-function makeBot(init){
-  return {
-    x: init.x, y: init.y,
-    vx: init.vx, vy: init.vy,
-    baseR: init.baseR,
-    color: init.color,
-    mood: 'neutral', moodUntil: 0,
-    phase: randi(0, SPEED_CYCLE.length-1), // fase de velocidade própria
-    lastBeepTs: 0,
-    isDragging: false, // novo: indica se o robô está sendo arrastado
-    dragOffsetX: 0, dragOffsetY: 0 // novo: offset do mouse em relação ao centro do robô
-  };
-}
-
-const bots = [];
-let numRobots = 1; // Número atual de robôs ativos
-
-// ====== Áudio (beep) ======
+// ====== Sistema de Áudio Global ======
 let audioCtx = null;
 function ensureAudio(){
   try{
@@ -78,97 +90,28 @@ function beep(){
   o.connect(g).connect(audioCtx.destination);
   o.start(); o.stop(audioCtx.currentTime + 0.14);
 }
-function beepWithCooldown(bot, minMs=150){ const now = performance.now(); if (now-bot.lastBeepTs>=minMs){ bot.lastBeepTs=now; beep(); } }
 
+// Torna o áudio disponível globalmente para os sprites
+window.gameAudio = { beep };
+
+// Funções simplificadas que delegam para o SpriteManager
 function resizeCanvas(){
-  const dpr = window.devicePixelRatio||1; const r = arenaEl.getBoundingClientRect();
-  canvas.width=Math.max(1,Math.floor(r.width*dpr)); canvas.height=Math.max(1,Math.floor(r.height*dpr));
-  canvas.style.width=r.width+'px'; canvas.style.height=r.height+'px';
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-  // garantir que ambos os robôs fiquem dentro
-  bots.forEach(b=>{
-    const rb = b.baseR*scaleFromStreak(streak);
-    b.x=Math.min(Math.max(rb,b.x), r.width-rb);
-    b.y=Math.min(Math.max(rb,b.y), r.height-rb);
-  });
-}
-
-function drawBot(b){
-  const r=b.baseR*scaleFromStreak(streak);
-  ctx.save(); ctx.translate(b.x,b.y);
-  ctx.fillStyle=b.color;
-  ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill();
-  // rodas
-  ctx.fillStyle='#1f2937'; ctx.beginPath(); ctx.arc(-r*0.5, r*0.9, r*0.18, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(r*0.5, r*0.9, r*0.18, 0, Math.PI*2); ctx.fill();
-  // olhos
-  ctx.fillStyle='#0f172a'; const eyeY=-r*0.15;
-  ctx.beginPath(); ctx.arc(-r*0.35, eyeY, r*0.10, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(r*0.35, eyeY, r*0.10, 0, Math.PI*2); ctx.fill();
-  // sorriso
-  const smile=smileFromStreak(streak); let offset=0; let color='#0f172a';
-  if (b.isDragging){
-    // Boca circular para surpresa quando arrastando
-    ctx.fillStyle='#0f172a';
-    ctx.beginPath(); ctx.arc(0, r*0.28, r*0.15, 0, Math.PI*2); ctx.fill();
-  } else {
-    if (b.mood==='happy'){ offset=r*0.30*smile; color='#16a34a'; }
-    else if (b.mood==='sad'){ offset=-r*0.22; color='#dc2626'; }
-    ctx.strokeStyle=color; ctx.lineWidth=Math.max(2, r*0.08);
-    ctx.beginPath(); ctx.moveTo(-r*0.48, r*0.28); ctx.quadraticCurveTo(0, r*0.28+offset, r*0.48, r*0.28); ctx.stroke();
+  if (spriteManager) {
+    spriteManager.resize();
   }
-  // antena
-  ctx.strokeStyle='#1e3a8a'; ctx.lineWidth=Math.max(2, r*0.08);
-  ctx.beginPath(); ctx.moveTo(0,-r); ctx.lineTo(0,-r*1.4); ctx.stroke();
-  ctx.fillStyle='#60a5fa'; ctx.beginPath(); ctx.arc(0,-r*1.55, r*0.12, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
 }
 
 function drawScene(){
-  const w=canvas.clientWidth,h=canvas.clientHeight;
-  ctx.clearRect(0,0,w,h);
-  // Desenha apenas os robôs ativos baseado no número atual
-  for(let i = 0; i < Math.min(numRobots, bots.length); i++){
-    drawBot(bots[i]);
+  if (spriteManager) {
+    spriteManager.draw();
   }
 }
 
-function updateBot(b, dt, w, h){
-  // Não mover se estiver sendo arrastado
-  if (b.isDragging) return;
-
-  // boost independente (cíclico com o tempo)
-  if (!b.phaseTimer) b.phaseTimer=0;
-  b.phaseTimer += dt;
-  if (b.phaseTimer > 0.7){ b.phaseTimer = 0; b.phase = (b.phase+1) % SPEED_CYCLE.length; }
-  const speedBoost = speedBoostFromPhase(b.phase);
-  const r = b.baseR*scaleFromStreak(streak);
-  b.x += b.vx*dt*speedBoost;
-  b.y += b.vy*dt*speedBoost;
-
-  let bounced=false;
-  if (b.x<r){ b.x=r; b.vx*=-1; bounced=true; }
-  if (b.x>w-r){ b.x=w-r; b.vx*=-1; bounced=true; }
-  if (b.y<r){ b.y=r; b.vy*=-1; bounced=true; }
-  if (b.y>h-r){ b.y=h-r; b.vy*=-1; bounced=true; }
-  if (bounced) beepWithCooldown(b, 120);
-  // jitter leve e clamp
-  if (Math.random()<0.01){ b.vx += (Math.random()-0.5)*40; b.vy += (Math.random()-0.5)*40; }
-  b.vx=Math.max(-140,Math.min(140,b.vx));
-  b.vy=Math.max(-140,Math.min(140,b.vy));
-  // humor expira
-  if (b.mood!=='neutral' && performance.now()>b.moodUntil) b.mood='neutral';
-}
-
-let lastTs = 0;
 function tick(ts){
-  if(!lastTs) lastTs=ts; const dt=Math.min(0.05, (ts-lastTs)/1000); lastTs=ts;
-  const w=canvas.clientWidth,h=canvas.clientHeight;
-  // Atualiza apenas os robôs ativos
-  for(let i = 0; i < Math.min(numRobots, bots.length); i++){
-    updateBot(bots[i], dt, w, h);
+  if (spriteManager) {
+    spriteManager.update(ts);
+    spriteManager.draw();
   }
-  drawScene();
   requestAnimationFrame(tick);
 }
 
@@ -178,30 +121,66 @@ function updateScoreUI(){
 }
 
 function updateRobotCount(){
-  // Calcula o número de robôs baseado no streak (a cada 10 acertos consecutivos)
+  // Calcula o número de sprites baseado no streak (a cada 10 acertos consecutivos)
   const newNumRobots = Math.min(5, Math.max(1, Math.floor(streak / 10) + 1));
 
   if(newNumRobots !== numRobots){
     const oldNumRobots = numRobots;
     numRobots = newNumRobots;
 
-    // Atualiza o título
+    // Atualiza o sprite manager
+    if (spriteManager) {
+      spriteManager.setActiveCount(numRobots);
+      spriteManager.setGlobalScale(scaleFromStreak(streak));
+    }
+
+    // Atualiza o título baseado no tipo de sprite
     const title = document.querySelector('title');
+    const spriteTypeName = getSpriteTypeName();
 
     if(numRobots === 1){
-      title.textContent = 'Jogo — Matemática, Educação Financeira, Português & Tempo (1 Robô)';
+      title.textContent = `Jogo — Matemática, Educação Financeira, Português & Tempo (1 ${spriteTypeName})`;
     } else {
-      title.textContent = `Jogo — Matemática, Educação Financeira, Português & Tempo (${numRobots} Robôs)`;
+      const plural = getSpriteTypePlural();
+      title.textContent = `Jogo — Matemática, Educação Financeira, Português & Tempo (${numRobots} ${plural})`;
     }
 
-    // Se aumentou o número de robôs, mostra mensagem de parabéns
+    // Se aumentou o número de sprites, mostra mensagem de parabéns
     if(newNumRobots > oldNumRobots && newNumRobots > 1){
       const nextInfo = document.getElementById('nextInfo');
-      nextInfo.textContent = `🎉 Parabéns! ${newNumRobots}º robô desbloqueado com ${streak} acertos em sequência!`;
+      const spriteEmoji = getSpriteEmoji();
+      nextInfo.textContent = `🎉 Parabéns! ${newNumRobots}º ${spriteTypeName.toLowerCase()} desbloqueado com ${streak} acertos em sequência! ${spriteEmoji}`;
       setTimeout(() => {
-        if(nextInfo.textContent.includes('robô desbloqueado')) nextInfo.textContent = '';
+        if(nextInfo.textContent.includes('desbloqueado')) nextInfo.textContent = '';
       }, 4000);
     }
+  }
+}
+
+function getSpriteTypeName() {
+  switch(currentSpriteType) {
+    case 'robots': return 'Robô';
+    case 'ducklings': return 'Pintinho';
+    case 'mixed': return 'Sprite';
+    default: return 'Sprite';
+  }
+}
+
+function getSpriteTypePlural() {
+  switch(currentSpriteType) {
+    case 'robots': return 'Robôs';
+    case 'ducklings': return 'Pintinhos';
+    case 'mixed': return 'Sprites';
+    default: return 'Sprites';
+  }
+}
+
+function getSpriteEmoji() {
+  switch(currentSpriteType) {
+    case 'robots': return '🤖';
+    case 'ducklings': return '🐥�';
+    case 'mixed': return '🎪';
+    default: return '🎮';
   }
 }
 
@@ -347,9 +326,29 @@ function startGame(){
   GROUPS.forEach(collectAllItems);
   ACTIVE_GENERATORS = allItems.filter(c=>ids.includes(c.id)).map(c=>c.fn);
   if (ACTIVE_GENERATORS.length===0) return;
-  if (resetOnStart.checked){
+  
+  // Verifica se o tipo de sprite mudou
+  const spriteTypeElement = document.querySelector('input[name="spriteType"]:checked');
+  const selectedSpriteType = spriteTypeElement ? spriteTypeElement.value : 'robots';
+  const spriteTypeChanged = selectedSpriteType !== currentSpriteType;
+  
+  if (resetOnStart.checked || spriteTypeChanged){
     hits=0; misses=0; streak=0;
-    numRobots = 1; // Reset para 1 robô
+    numRobots = 1; // Reset para 1 sprite
+    currentSpriteType = selectedSpriteType;
+    
+    // Recria o sistema de sprites se o tipo mudou
+    if (spriteTypeChanged && spriteManager) {
+      const bounds = {
+        width: canvas.clientWidth || 600,
+        height: canvas.clientHeight || 350
+      };
+      spriteManager.clearSprites();
+      createSprites(bounds);
+      spriteManager.setActiveCount(numRobots);
+      spriteManager.setGlobalScale(scaleFromStreak(streak));
+    }
+    
     updateScoreUI();
     updateRobotCount(); // Atualiza o título
   }
@@ -404,10 +403,8 @@ function nextRound(){
   nextEl.textContent = '';
 }
 function setMoodAll(mood, ms){
-  // Define humor apenas para os robôs ativos
-  for(let i = 0; i < Math.min(numRobots, bots.length); i++){
-    bots[i].mood = mood;
-    bots[i].moodUntil = performance.now() + ms;
+  if (spriteManager) {
+    spriteManager.setMoodAll(mood, ms);
   }
 }
 function handleChoice(val){
@@ -452,126 +449,56 @@ function buildStatsTable(){
 statsBtn.addEventListener('click', () => { buildStatsTable(); statsModal.showModal(); });
 document.getElementById('closeStats').addEventListener('click', () => statsModal.close());
 
-function initBots(){
-  const w = (canvas.clientWidth||600), h = (canvas.clientHeight||350);
-  const colors = ['#93c5fd', '#c4b5fd', '#86efac', '#fbbf24', '#f87171']; // azul, roxo, verde, amarelo, vermelho
-
-  // Cria todos os 5 robôs de uma vez
-  for(let i = 0; i < 5; i++){
-    // Posiciona os robôs em diferentes áreas da tela
-    const angle = (i / 5) * Math.PI * 2; // Distribui em círculo
-    const centerX = w * 0.5;
-    const centerY = h * 0.5;
-    const radius = Math.min(w, h) * 0.25;
-
-    bots.push(makeBot({
-      x: centerX + Math.cos(angle) * radius + randf(-30,30),
-      y: centerY + Math.sin(angle) * radius + randf(-20,20),
-      vx: randf(70,120)*(Math.random()<0.5?-1:1),
-      vy: randf(60,110)*(Math.random()<0.5?-1:1),
-      baseR: randi(16, 32),
-      color: colors[i]
-    }));
-  }
-}
-
-function initCanvas(){ resizeCanvas(); drawScene(); requestAnimationFrame(tick); }
-
-function getMousePos(canvas, e) {
-  const rect = canvas.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-  return {
-    x: (e.clientX - rect.left) * dpr,
-    y: (e.clientY - rect.top) * dpr
+function initSpriteSystem(){
+  // Cria o gerenciador de sprites
+  spriteManager = new SpriteManager(canvas);
+  
+  // Obtém o tipo de sprite selecionado
+  const spriteTypeElement = document.querySelector('input[name="spriteType"]:checked');
+  currentSpriteType = spriteTypeElement ? spriteTypeElement.value : 'robots';
+  
+  // Cria os sprites baseado na seleção
+  const bounds = {
+    width: canvas.clientWidth || 600,
+    height: canvas.clientHeight || 350
   };
+  
+  createSprites(bounds);
+  spriteManager.setActiveCount(numRobots);
+  spriteManager.setGlobalScale(scaleFromStreak(streak));
 }
 
-function getBotAtPosition(mouseX, mouseY) {
-  // Verifica apenas robôs ativos
-  for (let i = 0; i < Math.min(numRobots, bots.length); i++) {
-    const bot = bots[i];
-    const r = bot.baseR * scaleFromStreak(streak);
-    const dx = mouseX - bot.x;
-    const dy = mouseY - bot.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-
-    if (distance <= r) {
-      return bot;
-    }
-  }
-  return null;
-}
-
-let draggedBot = null;
-let isDragging = false;
-
-function handleMouseDown(e) {
-  const mousePos = getMousePos(canvas, e);
-  draggedBot = getBotAtPosition(mousePos.x, mousePos.y);
-
-  if (draggedBot) {
-    isDragging = true;
-    draggedBot.isDragging = true;
-    draggedBot.dragOffsetX = mousePos.x - draggedBot.x;
-    draggedBot.dragOffsetY = mousePos.y - draggedBot.y;
-
-    // Impede comportamento padrão para evitar seleção de texto
-    e.preventDefault();
+function createSprites(bounds) {
+  if (currentSpriteType === 'robots') {
+    createRobots(spriteManager, 5, bounds);
+  } else if (currentSpriteType === 'ducklings') {
+    createDucklings(spriteManager, 5, bounds);
+  } else if (currentSpriteType === 'mixed') {
+    // Cria uma mistura de robôs e pintinhos
+    createRobots(spriteManager, 3, bounds);
+    createDucklings(spriteManager, 2, bounds);
   }
 }
 
-function handleMouseMove(e) {
-  if (isDragging && draggedBot) {
-    const mousePos = getMousePos(canvas, e);
-    const w = canvas.clientWidth, h = canvas.clientHeight;
-    const r = draggedBot.baseR * scaleFromStreak(streak);
 
-    // Atualiza posição do robô, mantendo dentro dos limites
-    draggedBot.x = Math.max(r, Math.min(w - r, mousePos.x - draggedBot.dragOffsetX));
-    draggedBot.y = Math.max(r, Math.min(h - r, mousePos.y - draggedBot.dragOffsetY));
 
-    e.preventDefault();
-  }
+function initCanvas(){ 
+  initSpriteSystem();
+  resizeCanvas(); 
+  drawScene(); 
+  requestAnimationFrame(tick); 
 }
-
-function handleMouseUp(e) {
-  if (isDragging && draggedBot) {
-    draggedBot.isDragging = false;
-    draggedBot = null;
-    isDragging = false;
-  }
-}
-
-// Adiciona event listeners para drag and drop
-canvas.addEventListener('mousedown', handleMouseDown);
-canvas.addEventListener('mousemove', handleMouseMove);
-canvas.addEventListener('mouseup', handleMouseUp);
-canvas.addEventListener('mouseleave', handleMouseUp); // Para quando o mouse sai do canvas
-
-// Suporte para touch (mobile)
-canvas.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  const touch = e.touches[0];
-  const mouseEvent = { clientX: touch.clientX, clientY: touch.clientY };
-  handleMouseDown(mouseEvent);
-});
-
-canvas.addEventListener('touchmove', (e) => {
-  e.preventDefault();
-  const touch = e.touches[0];
-  const mouseEvent = { clientX: touch.clientX, clientY: touch.clientY };
-  handleMouseMove(mouseEvent);
-});
-
-canvas.addEventListener('touchend', (e) => {
-  e.preventDefault();
-  handleMouseUp(e);
-});
 
 // Boot
 renderCategoryTree();
 updateScoreUI();
-initBots();
+
+// Garantir que um tipo de sprite esteja sempre selecionado
+const spriteRadios = document.querySelectorAll('input[name="spriteType"]');
+if (spriteRadios.length > 0 && !document.querySelector('input[name="spriteType"]:checked')) {
+  spriteRadios[0].checked = true; // Seleciona o primeiro (robots)
+}
+
 initCanvas();
 addEventListener('resize', resizeCanvas);
 document.addEventListener('pointerdown', ensureAudio, { once:true });
