@@ -3,6 +3,7 @@ import { items as matematicaItems } from './matematica/_grupo.js';
 import { items as financasItems } from './financas/_grupo.js';
 import { items as portuguesItems } from './portugues/_grupo.js';
 import { items as tempoItems } from './tempo/_grupo.js';
+import { items as cienciasItems } from './ciencias/_grupo.js';
 
 export const GROUPS = [
   {
@@ -34,6 +35,18 @@ export const GROUPS = [
     label: 'Tempo',
     subgroups: [
       { id: 'sub_tempo_all', label: 'Exercícios', items: tempoItems }
+    ]
+  },
+  {
+    id: 'grp_cien',
+    label: 'Ciências',
+    subgroups: [
+      { id: 'sub_cien_g1', label: 'Materiais naturais', items: cienciasItems.slice(0, 1) },
+      { id: 'sub_cien_g2', label: 'Materiais artificiais', items: cienciasItems.slice(1, 2) },
+      { id: 'sub_cien_g3', label: 'Correspondência material/objeto', items: cienciasItems.slice(2, 3) },
+      { id: 'sub_cien_g4', label: 'Uso e propriedades', items: cienciasItems.slice(3, 4) },
+      { id: 'sub_cien_g5', label: 'Segurança e prevenção', items: cienciasItems.slice(4, 5) },
+      { id: 'sub_cien_g6', label: 'Comparações e transformações', items: cienciasItems.slice(5) }
     ]
   }
 ];

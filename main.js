@@ -1,9 +1,9 @@
 // =================== Imports das Categorias ===================
 import { randi, randf, pick } from './categorias/utils.js';
 import { GROUPS } from './categorias/_grupo.js';
-import { SpriteManager } from './sprites/manager.js';
 import { createRobots } from './sprites/robot.js';
 import { createDucklings } from './sprites/duckling.js';
+import { createBunnies } from './sprites/bunny.js';
 
 /*
   === EXEMPLO DE EXTENSIBILIDADE ===
@@ -139,10 +139,10 @@ function updateRobotCount(){
     const spriteTypeName = getSpriteTypeName();
 
     if(numRobots === 1){
-      title.textContent = `Jogo — Matemática, Educação Financeira, Português & Tempo (1 ${spriteTypeName})`;
+      title.textContent = `Jogo — Matemática, Educação Financeira, Português, Tempo & Ciências (1 ${spriteTypeName})`;
     } else {
       const plural = getSpriteTypePlural();
-      title.textContent = `Jogo — Matemática, Educação Financeira, Português & Tempo (${numRobots} ${plural})`;
+      title.textContent = `Jogo — Matemática, Educação Financeira, Português, Tempo & Ciências (${numRobots} ${plural})`;
     }
 
     // Se aumentou o número de sprites, mostra mensagem de parabéns
@@ -161,6 +161,7 @@ function getSpriteTypeName() {
   switch(currentSpriteType) {
     case 'robots': return 'Robô';
     case 'ducklings': return 'Pintinho';
+    case 'bunnies': return 'Coelhinho';
     case 'mixed': return 'Sprite';
     default: return 'Sprite';
   }
@@ -170,6 +171,7 @@ function getSpriteTypePlural() {
   switch(currentSpriteType) {
     case 'robots': return 'Robôs';
     case 'ducklings': return 'Pintinhos';
+    case 'bunnies': return 'Coelhinhos';
     case 'mixed': return 'Sprites';
     default: return 'Sprites';
   }
@@ -178,7 +180,8 @@ function getSpriteTypePlural() {
 function getSpriteEmoji() {
   switch(currentSpriteType) {
     case 'robots': return '🤖';
-    case 'ducklings': return '🐥�';
+    case 'ducklings': return '🐥';
+    case 'bunnies': return '🐰';
     case 'mixed': return '🎪';
     default: return '🎮';
   }
@@ -473,6 +476,8 @@ function createSprites(bounds) {
     createRobots(spriteManager, 5, bounds);
   } else if (currentSpriteType === 'ducklings') {
     createDucklings(spriteManager, 5, bounds);
+  } else if (currentSpriteType === 'bunnies') {
+    createBunnies(spriteManager, 5, bounds);
   } else if (currentSpriteType === 'mixed') {
     // Cria uma mistura de robôs e pintinhos
     createRobots(spriteManager, 3, bounds);
