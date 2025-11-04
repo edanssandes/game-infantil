@@ -42,10 +42,10 @@ const DATA_CIENCAS_GRUPO6 = [
     question: 'As janelas atuais são de...',
     options: [
       { val: 'a', label: 'Alumínio' },
-      { val: 'b', label: 'Vidro' },
+      { val: 'b', label: 'Plástico' },
       { val: 'c', label: 'Tecido' }
     ],
-    answer: 'b'
+    answer: 'a'
   },
   {
     question: 'Os sacos antigos eram de...',

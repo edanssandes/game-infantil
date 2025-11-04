@@ -45,7 +45,7 @@ const DATA_CIENCAS_GRUPO2 = [
       { val: 'b', label: 'Metal natural' },
       { val: 'c', label: 'Mineral precioso' }
     ],
-    answer: 'c'
+    answer: 'a'
   },
   {
     question: 'O vidro é considerado...',
@@ -66,7 +66,7 @@ const DATA_CIENCAS_GRUPO2 = [
     answer: 'a'
   },
   {
-    question: 'O papel é feito de...',
+    question: 'O papel é feito da ...',
     options: [
       { val: 'a', label: 'Madeira' },
       { val: 'b', label: 'Plástico' },
