@@ -132,7 +132,6 @@ function updateRobotCount(){
     // Atualiza o sprite manager
     if (spriteManager) {
       spriteManager.setActiveCount(numRobots);
-      spriteManager.setGlobalScale(scaleFromStreak(streak));
     }
 
     // Atualiza o título baseado no tipo de sprite
@@ -155,6 +154,11 @@ function updateRobotCount(){
         if(nextInfo.textContent.includes('desbloqueado')) nextInfo.textContent = '';
       }, 4000);
     }
+  }
+
+  // Sempre atualiza a escala baseada no streak atual
+  if (spriteManager) {
+    spriteManager.setGlobalScale(scaleFromStreak(streak));
   }
 }
 
